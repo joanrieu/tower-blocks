@@ -12,12 +12,16 @@ interface GameObject {
   crane?: {
     ltr: boolean,
     position: number,
-    nextBlock?: GameObject
+    nextBlock?: GameObject,
+    cooldown: number
   }
 }
 
 const canvas = document.getElementsByTagName("canvas")[0]
 const ctx = canvas.getContext("2d")!
+
+let drop = false
+document.addEventListener("keydown", event => drop = event.keyCode === 32)
 
 const rootGO: GameObject = {
   transform: {
@@ -34,13 +38,14 @@ setTimeout(function setup() {
     transform: {
       children: [],
       x: 0,
-      y: -4,
+      y: -7,
       w: .2,
       h: 2
     },
     crane: {
       ltr: true,
-      position: 0
+      position: 0,
+      cooldown: Date.now()
     }
   }
   rootGO.transform.children.push(crane)
@@ -61,7 +66,7 @@ function updateGO(go: GameObject) {
 function updateBlock(blockGO: GameObject) {
   if (blockGO.block) {
     if (blockGO.block.falling)
-      blockGO.transform.x -= .01
+      blockGO.transform.y += .1
   }
 }
 
@@ -76,8 +81,9 @@ function updateCrane(craneGO: GameObject) {
       craneGO.crane.ltr = !craneGO.crane.ltr
     craneGO.crane.position = craneGO.crane.position
     craneGO.transform.x = Math.sin((craneGO.crane.position - max / 2) * Math.PI / max) * 3
-    if (!craneGO.crane.nextBlock) {
-      const block: GameObject = {
+
+    if (!craneGO.crane.nextBlock && Date.now() > craneGO.crane.cooldown) {
+      const blockGO: GameObject = {
         transform: {
           children: [],
           x: 0,
@@ -89,8 +95,20 @@ function updateCrane(craneGO: GameObject) {
           falling: false
         }
       }
-      craneGO.transform.children.push(block)
-      craneGO.crane.nextBlock = block
+      craneGO.transform.children.push(blockGO)
+      craneGO.crane.nextBlock = blockGO
+    }
+
+    if (drop && craneGO.crane.nextBlock) {
+      drop = false
+      const blockGO = craneGO.crane.nextBlock
+      delete craneGO.crane.nextBlock
+      craneGO.transform.children.pop()
+      blockGO.transform.x += craneGO.transform.x
+      blockGO.transform.y += craneGO.transform.y
+      rootGO.transform.children.push(blockGO)
+      blockGO.block!.falling = true
+      craneGO.crane.cooldown = Date.now() + 1000
     }
   }
 }
@@ -111,7 +129,7 @@ function resizeCanvas() {
   canvas.height = document.body.clientHeight
   ctx.translate(canvas.width / 2, canvas.height / 2)
 
-  const heightInBlocks = 10
+  const heightInBlocks = 15
   const coef = canvas.height / heightInBlocks
   ctx.scale(coef, coef)
 }

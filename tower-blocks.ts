@@ -7,11 +7,12 @@ interface GameObject {
     h: number
   },
   block?: {
-    color: string
+    falling: boolean
   },
   crane?: {
     ltr: boolean,
-    position: number
+    position: number,
+    nextBlock?: GameObject
   }
 }
 
@@ -57,24 +58,40 @@ function updateGO(go: GameObject) {
     updateGO(childGO)
 }
 
-function updateBlock(go: GameObject) {
-  if (go.block) {
-    // todo
+function updateBlock(blockGO: GameObject) {
+  if (blockGO.block) {
+    if (blockGO.block.falling)
+      blockGO.transform.x -= .01
   }
 }
 
-function updateCrane(go: GameObject) {
-  if (go.crane) {
+function updateCrane(craneGO: GameObject) {
+  if (craneGO.crane) {
     const max = 100
-    let { position } = go.crane
-    if (go.crane.ltr)
-      position++
+    if (craneGO.crane.ltr)
+      craneGO.crane.position++
     else
-      position--
-    if (position % max === 0)
-      go.crane.ltr = !go.crane.ltr
-    go.crane.position = position
-    go.transform.x = Math.sin((position - max / 2) * Math.PI / max) * 3
+      craneGO.crane.position--
+    if (craneGO.crane.position % max === 0)
+      craneGO.crane.ltr = !craneGO.crane.ltr
+    craneGO.crane.position = craneGO.crane.position
+    craneGO.transform.x = Math.sin((craneGO.crane.position - max / 2) * Math.PI / max) * 3
+    if (!craneGO.crane.nextBlock) {
+      const block: GameObject = {
+        transform: {
+          children: [],
+          x: 0,
+          y: craneGO.transform.h / 2,
+          w: 1,
+          h: 1
+        },
+        block: {
+          falling: false
+        }
+      }
+      craneGO.transform.children.push(block)
+      craneGO.crane.nextBlock = block
+    }
   }
 }
 
@@ -92,8 +109,10 @@ requestAnimationFrame(function render() {
 function resizeCanvas() {
   canvas.width = document.body.clientWidth
   canvas.height = document.body.clientHeight
-  const coef = canvas.height / 10
   ctx.translate(canvas.width / 2, canvas.height / 2)
+
+  const heightInBlocks = 10
+  const coef = canvas.height / heightInBlocks
   ctx.scale(coef, coef)
 }
 
@@ -114,8 +133,8 @@ function renderGO(go: GameObject) {
 function renderBlock(go: GameObject) {
   if (go.block) {
     const { x, y, w, h } = go.transform
-    ctx.strokeStyle = "darkblue"
-    ctx.strokeRect(x - w / 2, y - h / 2, w, h)
+    ctx.fillStyle = "darkblue"
+    ctx.fillRect(x - w / 2, y - h / 2, w, h)
   }
 }
 

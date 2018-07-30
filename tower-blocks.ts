@@ -9,6 +9,7 @@ interface GameObject {
   block?: {
     falling: boolean
   },
+  camera?: {},
   crane?: {
     ltr: boolean,
     position: number,
@@ -23,9 +24,22 @@ const ctx = canvas.getContext("2d")!
 let drop = false
 document.addEventListener("keydown", event => drop = event.keyCode === 32)
 
-const rootGO: GameObject = {
+const cameraGO: GameObject = {
   transform: {
     children: [],
+    x: 0,
+    y: 0,
+    w: 0,
+    h: 0
+  },
+  camera: {}
+}
+
+const rootGO: GameObject = {
+  transform: {
+    children: [
+      cameraGO
+    ],
     x: 0,
     y: 0,
     w: 0,
@@ -34,13 +48,13 @@ const rootGO: GameObject = {
 }
 
 setTimeout(function setup() {
-  const crane: GameObject = {
+  const craneGO: GameObject = {
     transform: {
       children: [],
       x: 0,
-      y: -7,
+      y: -5,
       w: .2,
-      h: 2
+      h: 10
     },
     crane: {
       ltr: true,
@@ -48,7 +62,21 @@ setTimeout(function setup() {
       cooldown: Date.now()
     }
   }
-  rootGO.transform.children.push(crane)
+  rootGO.transform.children.push(craneGO)
+
+  const baseBlockGO: GameObject = {
+    transform: {
+      children: [],
+      x: 0,
+      y:  0,
+      w: 10,
+      h: 1
+    },
+    block: {
+      falling: false
+    }
+  }
+  rootGO.transform.children.push(baseBlockGO)
 })
 
 function update() {
@@ -57,6 +85,7 @@ function update() {
 
 function updateGO(go: GameObject) {
   updateBlock(go)
+  updateCamera(go)
   updateCrane(go)
 
   for (const childGO of go.transform.children)
@@ -65,13 +94,37 @@ function updateGO(go: GameObject) {
 
 function updateBlock(blockGO: GameObject) {
   if (blockGO.block) {
-    if (blockGO.block.falling)
-      blockGO.transform.y += .1
+    // apply gravity
+    if (blockGO.block.falling) {
+      const speed = .1
+      blockGO.transform.y += speed
+
+      // stop falling when touching previous block
+      const snappingDistance = .1
+      const topBlockGO = findTopBlock()
+      const dx = Math.abs(topBlockGO.transform.x - blockGO.transform.x)
+      const dy = Math.abs(topBlockGO.transform.y - blockGO.transform.y)
+      const minx = (topBlockGO.transform.w + blockGO.transform.w) / 2
+      const miny = (topBlockGO.transform.h + blockGO.transform.h) / 2
+      if (dx <= minx && dy < miny + snappingDistance) {
+        blockGO.block.falling = false
+        blockGO.transform.y = topBlockGO.transform.y - miny
+      }
+    }
+  }
+}
+
+function updateCamera(cameraGO: GameObject) {
+  if (cameraGO.camera) {
+    const highestBlockY = findTopBlock().transform.y
+    const targetY = highestBlockY - 3
+    cameraGO.transform.y = cameraGO.transform.y * .9 + targetY * .1
   }
 }
 
 function updateCrane(craneGO: GameObject) {
   if (craneGO.crane) {
+    // move horizontally
     const max = 100
     if (craneGO.crane.ltr)
       craneGO.crane.position++
@@ -79,9 +132,14 @@ function updateCrane(craneGO: GameObject) {
       craneGO.crane.position--
     if (craneGO.crane.position % max === 0)
       craneGO.crane.ltr = !craneGO.crane.ltr
-    craneGO.crane.position = craneGO.crane.position
     craneGO.transform.x = Math.sin((craneGO.crane.position - max / 2) * Math.PI / max) * 3
 
+    // move vertically
+    const highestBlockY = findTopBlock().transform.y
+    const targetY = highestBlockY - 12
+    craneGO.transform.y = craneGO.transform.y * .9 + targetY * .1
+
+    // create a new block
     if (!craneGO.crane.nextBlock && Date.now() > craneGO.crane.cooldown) {
       const blockGO: GameObject = {
         transform: {
@@ -99,8 +157,8 @@ function updateCrane(craneGO: GameObject) {
       craneGO.crane.nextBlock = blockGO
     }
 
+    // drop a block
     if (drop && craneGO.crane.nextBlock) {
-      drop = false
       const blockGO = craneGO.crane.nextBlock
       delete craneGO.crane.nextBlock
       craneGO.transform.children.pop()
@@ -110,7 +168,16 @@ function updateCrane(craneGO: GameObject) {
       blockGO.block!.falling = true
       craneGO.crane.cooldown = Date.now() + 1000
     }
+
+    drop = false
   }
+}
+
+function findTopBlock() {
+  return rootGO.transform.children
+    .filter(go => go.block && !go.block.falling)
+    .sort((a, b) => a.transform.y - b.transform.y)
+    .shift()!
 }
 
 requestAnimationFrame(function render() {
@@ -118,6 +185,7 @@ requestAnimationFrame(function render() {
 
   ctx.save()
   resizeCanvas()
+  ctx.translate(-cameraGO.transform.x, -cameraGO.transform.y)
   renderGO(rootGO)
   ctx.restore()
 

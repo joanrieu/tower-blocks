@@ -24,22 +24,9 @@ const ctx = canvas.getContext("2d")!
 let drop = false
 document.addEventListener("keydown", event => drop = event.keyCode === 32)
 
-const cameraGO: GameObject = {
-  transform: {
-    children: [],
-    x: 0,
-    y: 0,
-    w: 0,
-    h: 0
-  },
-  camera: {}
-}
-
 const rootGO: GameObject = {
   transform: {
-    children: [
-      cameraGO
-    ],
+    children: [],
     x: 0,
     y: 0,
     w: 0,
@@ -47,7 +34,21 @@ const rootGO: GameObject = {
   }
 }
 
+let cameraGO: GameObject
+
 setTimeout(function setup() {
+  cameraGO = {
+    transform: {
+      children: [],
+      x: 0,
+      y: 0,
+      w: 0,
+      h: 0
+    },
+    camera: {}
+  }
+  rootGO.transform.children.push(cameraGO)
+
   const craneGO: GameObject = {
     transform: {
       children: [],
@@ -183,11 +184,13 @@ function findTopBlock() {
 requestAnimationFrame(function render() {
   update()
 
-  ctx.save()
-  resizeCanvas()
-  ctx.translate(-cameraGO.transform.x, -cameraGO.transform.y)
-  renderGO(rootGO)
-  ctx.restore()
+  if (cameraGO) {
+    ctx.save()
+    resizeCanvas()
+    ctx.translate(-cameraGO.transform.x, -cameraGO.transform.y)
+    renderGO(rootGO)
+    ctx.restore()
+  }
 
   requestAnimationFrame(render)
 })

@@ -1,0 +1,24 @@
+{
+  "name": "tower-blocks",
+  "version": "1.0.0",
+  "description": "A game about piling up blocks to build the tallest tower ",
+  "main": "tower-blocks.js",
+  "dependencies": {
+    "typescript": "^2.9.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "compile": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joanrieu/tower-blocks.git"
+  },
+  "keywords": [],
+  "author": "Joan Rieu <joan@joanrieu.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/joanrieu/tower-blocks/issues"
+  },
+  "homepage": "https://github.com/joanrieu/tower-blocks#readme"
+}
